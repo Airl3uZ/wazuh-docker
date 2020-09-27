@@ -31,3 +31,5 @@ server.ssl.key: "/usr/share/elasticsearch/config/certificates/kibana/kibana.key"
 elasticsearch.username: "kibana_system"
 elasticsearch.password: "testenv"
 xpack.security.enabled: true
+
+csp.strict: true
