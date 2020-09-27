@@ -1,0 +1,33 @@
+#
+# ** THIS IS AN AUTO-GENERATED FILE **
+#
+
+# Default Kibana configuration for docker target
+server.name: kibana
+server.host: "0"
+server.port: 5601
+elasticsearch.hosts: [ "https://es01:9200" ]
+monitoring.ui.container.elasticsearch.enabled: true
+#xpack features
+xpack.apm.ui.enabled: true
+xpack.grokdebugger.enabled: true
+xpack.searchprofiler.enabled: true
+xpack.ml.enabled: true
+xpack.canvas.enabled: true
+xpack.infra.enabled: true
+xpack.monitoring.enabled: true
+xpack.monitoring.collection.enabled: true
+console.enabled: true
+
+# Security Config
+elasticsearch.ssl.verificationMode: "none"
+elasticsearch.ssl.certificateAuthorities: ["/usr/share/elasticsearch/config/certificates/ca/ca.crt"]
+elasticsearch.ssl.certificate: "/usr/share/elasticsearch/config/certificates/kibana/kibana.crt"
+elasticsearch.ssl.key: "/usr/share/elasticsearch/config/certificates/kibana/kibana.key"
+
+server.ssl.enabled: true
+server.ssl.certificate: "/usr/share/elasticsearch/config/certificates/kibana/kibana.crt"
+server.ssl.key: "/usr/share/elasticsearch/config/certificates/kibana/kibana.key"
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "testenv"
+xpack.security.enabled: true

@@ -1,0 +1,21 @@
+# cluster node
+network.host: 0.0.0.0
+node.name: es01
+node.master: true
+cluster.initial_master_nodes:
+  - es01
+# end cluster config"
+# xpack config
+# # Required to set the passwords and TLS options
+xpack.security.enabled: true
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.verification_mode: certificate
+xpack.security.transport.ssl.key: /usr/share/elasticsearch/config/elasticsearch/elasticsearch.key
+xpack.security.transport.ssl.certificate: /usr/share/elasticsearch/config/elasticsearch.cert.pem
+xpack.security.transport.ssl.certificate_authorities: ["/usr/share/elasticsearch/config/ca.cert.pem"]
+# HTTP layer
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.verification_mode: certificate
+xpack.security.http.ssl.key: /usr/share/elasticsearch/config/elasticsearch/elasticsearch.key
+xpack.security.http.ssl.certificate: /usr/share/elasticsearch/config/elasticsearch.cert.pem
+xpack.security.http.ssl.certificate_authorities: ["/usr/share/elasticsearch/config/ca.cert.pem"]

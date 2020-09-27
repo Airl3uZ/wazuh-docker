@@ -1,0 +1,7 @@
+docker exec es01 /bin/bash -c "bin/elasticsearch-setup-passwords \
+interactive --batch \
+--url https://localhost:9200"
+
+
+docker exec es01 /bin/bash -c "bin/elasticsearch-setup-passwords \
+interactive --batch --url https://localhost:9200"
