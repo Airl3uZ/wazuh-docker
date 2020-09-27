@@ -80,4 +80,6 @@ if [[ "$(id -u)" == "0" ]]; then
   fi
 fi
 
+bin/elasticsearch-plugin install --batch https://artifacts.elastic.co/downloads/elasticsearch-plugins/repository-s3/repository-s3-${ES_VERSION}.zip
+
 run_as_other_user_if_needed /usr/share/elasticsearch/bin/elasticsearch <<<"$KEYSTORE_PASSWORD"
