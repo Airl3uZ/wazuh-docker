@@ -12,9 +12,11 @@ setup.template.json.name: 'wazuh'
 setup.template.overwrite: true
 setup.ilm.enabled: false
 
-output.elasticsearch.hosts: ['https://es01:9200']
+output.elasticsearch.hosts: ['es01:9200']
+output.elasticsearch.protocol: https
 output.elasticsearch.username: "elastic"
-output.elasticsearch.password: "testenv"
+output.elasticsearch.password: "changeme"
 output.elasticsearch.ssl.certificate: "/etc/filebeat/certs/wazuh/wazuh.crt"
 output.elasticsearch.ssl.key: "/etc/filebeat/certs/wazuh/wazuh.key"
 output.elasticsearch.ssl.certificate_authorities: ["/etc/filebeat/certs/ca/ca.crt"]
+
