@@ -20,7 +20,7 @@ else
 fi
 
 until curl -XGET $el_url ${auth}; do
-  >&2 echo "Elastic is unavailable - sleeping"
+  >&2 echo "curl -XGET $el_url ${auth}: Elastic is unavailable - sleeping"
   sleep 5
 done
 

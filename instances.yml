@@ -15,9 +15,15 @@ instances:
   - name: 'wazuh'
     dns:
       - wazuh
+      - wazuh-manager
       - localhost
 
   - name: 'logstash'
     dns:
       - logstash
+      - localhost
+
+  - name: 'beats'
+    dns:
+      - beats
       - localhost

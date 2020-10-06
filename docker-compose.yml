@@ -1,11 +1,21 @@
 # Wazuh App Copyright (C) 2020 Wazuh Inc. (License GPLv2)
 version: '3.8'
 
+networks:
+  elastic_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: $SUBNET
+    driver_opts:
+      com.docker.network.bridge.name: br_elastic_net
+
 services:
   wazuh:
-    image: wazuh/wazuh:3.13.2_${VERSION}
-    hostname: wazuh-manager
-    container_name: wazuh-manager
+    image: wazuh/wazuh:${WAZUH_VERSION}_7.9.1
+    hostname: wazuh
+    container_name: wazuh
     restart: always
     environment:
       - TZ=Asia/Bangkok
@@ -21,12 +31,15 @@ services:
     networks:
       - elastic_net
     volumes:
-      - /docker/wazuh/wazuh-data/:/var/ossec/data/:Z
+      - ./wazuh/wazuh-data/:/var/ossec/data/:Z
+      - ./wazuh/ssh-keys/:/var/ossec/.ssh/:Z
+      - ./wazuh/scap/ssg/content/:/var/ossec/wodles/oscap/content/:Z
+      - ./wazuh/scap/oval/content/:/var/ossec/wodles/oscap/oval/content/:Z
       - ./certs:/etc/filebeat/certs:Z
       - ./filebeat/filebeat.yml:/etc/filebeat/filebeat.yml:Z
 
   es01:
-    image: docker.elastic.co/elasticsearch/elasticsearch:${VERSION}
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
     hostname: es01
     container_name: es01
     restart: always
@@ -34,8 +47,9 @@ services:
       - "9200:9200"
       - "9300:9300"
     environment:
+      - TZ=Asia/Bangkok
       - node.master=true
-      - ES_VERSION=$VERSION
+      - ES_VERSION=$ELK_VERSION
       - node.data=true
       - node.ingest=true
       - node.ml=true
@@ -43,13 +57,14 @@ services:
       - cluster.name=elasticsearch
       - cluster.initial_master_nodes=es01
       - bootstrap.memory_lock=true
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
       - network.host=0.0.0.0
       - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
       - path.repo=/mnt/snapshots
       - xpack.ml.enabled=true
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.verification_mode=certificate
       - xpack.security.http.ssl.key=$CERTS_DIR/es01/es01.key
       - xpack.security.http.ssl.certificate_authorities=$CERTS_DIR/ca/ca.crt
       - xpack.security.http.ssl.certificate=$CERTS_DIR/es01/es01.crt
@@ -71,7 +86,7 @@ services:
       - ./elasticsearch/es-data/:/usr/share/elasticsearch/data:Z
       - ./elasticsearch/es-backup:/mnt/snapshots:Z
       - ./elasticsearch/config/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh
-      - ./certs:$CERTS_DIR:Z
+      - ./certs:$CERTS_DIR:ro
     healthcheck:
       test: curl --cacert $CERTS_DIR/ca/ca.crt -s https://localhost:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
       interval: 30s
@@ -81,43 +96,81 @@ services:
       - elastic_net
 
   kibana:
-    image: wazuh/wazuh-kibana:3.13.2_${VERSION}
+    # image: docker.elastic.co/kibana/kibana:${ELK_VERSION}
+    image: wazuh_kibana:${WAZUH_VERSION}_${ELK_VERSION}
     hostname: kibana
     container_name: kibana
     restart: always
     environment:
       - TZ=Asia/Bangkok
+      - DEBUG=true
+      - ELASTIC_VERSION=$ELK_VERSION
+      - WAZUH_VERSION=$WAZUH_VERSION
       - ENABLED_XPACK=true
-      - ELASTICSEARCH_KIBANA_IP=https://es01:9200
       - ELASTICSEARCH_URL=https://es01:9200
       - ELASTICSEARCH_HOSTS=https://es01:9200
       - ELASTICSEARCH_USERNAME=elastic
       - ELASTICSEARCH_PASSWORD=$ELASTIC_PASSWORD
       - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=$CERTS_DIR/ca/ca.crt
+      - SERVER_NAME=kibana
       - SERVER_SSL_ENABLED=true
       - SERVER_SSL_KEY=$CERTS_DIR/kibana/kibana.key
       - SERVER_SSL_CERTIFICATE=$CERTS_DIR/kibana/kibana.crt
+      - monitoring.ui.container.elasticsearch.enabled=true
       - API_USER=$WAZUH_API_USER
       - API_PASS=$WAZUH_API_PASS
       - CERTS_DIR=$CERTS_DIR
-      - DEBUG=1
     ports:
-      - "5601:5601"
+      - "443:5601"
     volumes:
-      - ./certs:$CERTS_DIR:Z
+      - ./certs:$CERTS_DIR:ro
       - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:Z
-      - ./kibana/scripts/entrypoint.sh:/entrypoint.sh
-      - ./kibana/scripts/kibana_settings.sh:/kibana_settings.sh
     depends_on: ['es01']
     networks:
       - elastic_net
 
-networks:
-  elastic_net:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: $SUBNET
-    driver_opts:
-      com.docker.network.bridge.name: br_elastic_net
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${ELK_VERSION}
+    hostname: logstash
+    container_name: logstash
+    restart: always
+    environment:
+      - TZ=Asia/Bangkok
+      - CERTS_DIR=$CERTS_DIR
+      - LS_JAVA_OPTS=-Xmx1g -Xms1g
+      - node.name=logstash
+      - xpack.monitoring.enabled=true
+      - ELASTIC_HOST=https://es01:9200
+      - SSL_ENABLED=true
+      - ELASTICSEARCH_USERNAME=t2p_logstash
+      - ELASTICSEARCH_PASSWORD=$ELASTIC_PASSWORD
+      - xpack.monitoring.elasticsearch.hosts=[ "https://es01:9200" ]
+      - xpack.monitoring.elasticsearch.username=logstash_system
+      - xpack.monitoring.elasticsearch.password=$ELASTIC_PASSWORD
+      - xpack.monitoring.elasticsearch.ssl.certificate_authority=$CERTS_DIR/ca/ca.crt
+    ports:
+      - "5000:5000"
+      - "5044:5044"
+      - "9600:9600"
+    networks:
+      - elastic_net
+    volumes:
+      - ./certs:$CERTS_DIR:ro
+      - ./logstash/config/:/usr/share/logstash/config/:Z
+      - ./logstash/pipeline/:/usr/share/logstash/pipeline/:Z
+    depends_on:
+      - es01
+
+  # grafana:
+  #   image: grafana/grafana:${GRAFANA_VERSION}
+  #   hostname: grafana
+  #   container_name: grafana
+  #   user: "1000"
+  #   networks:
+  #     - elastic_net
+  #   ports:
+  #     - 3000:3000
+  #   volumes:
+  #     - ./grafana/data:/var/lib/grafana
+  #   environment:
+  #     - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
