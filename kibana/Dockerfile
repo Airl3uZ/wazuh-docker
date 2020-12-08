@@ -1,12 +1,16 @@
 # Wazuh Docker Copyright (C) 2020 Wazuh Inc. (License GPLv2)
-FROM docker.elastic.co/kibana/kibana:7.9.2
+FROM elastic/kibana:7.10.0
+LABEL maintainer="siriwat.jiws@gmail.com"
 USER kibana
-ARG ELASTIC_VERSION=${ELASTIC_VERSION}
-ARG WAZUH_VERSION=${WAZUH_VERSION}
+ARG ELASTIC_VERSION=7.9.1
+ARG WAZUH_VERSION=4.0.3
 ARG WAZUH_APP_VERSION="${WAZUH_VERSION}_${ELASTIC_VERSION}"
 
+COPY elastalert-kibana-plugin-1.1.0-7.5.0.zip /tmp/plugins/elastalert-kibana-plugin-1.1.0-7.5.0.zip
 WORKDIR /usr/share/kibana
-RUN ./bin/kibana-plugin install https://packages.wazuh.com/wazuhapp/wazuhapp-${WAZUH_APP_VERSION}.zip
+RUN ./bin/kibana-plugin install https://packages.wazuh.com/4.x/ui/kibana/wazuh_kibana-${WAZUH_APP_VERSION}-1.zip \
+    && ./bin/kibana-plugin install /tmp/plugins/elastalert-kibana-plugin-1.1.0-7.5.0.zip \
+    && rm -rf /tmp/plugins
 
 WORKDIR /
 USER root
@@ -20,45 +24,41 @@ ENV PATTERN="" \
     CHECKS_SETUP="" \
     EXTENSIONS_PCI="" \
     EXTENSIONS_GDPR="" \
+    EXTENSIONS_HIPAA="" \
+    EXTENSIONS_NIST="" \
+    EXTENSIONS_TSC="" \
     EXTENSIONS_AUDIT="" \
     EXTENSIONS_OSCAP="" \
     EXTENSIONS_CISCAT="" \
     EXTENSIONS_AWS="" \
+    EXTENSIONS_GCP="" \
     EXTENSIONS_VIRUSTOTAL="" \
     EXTENSIONS_OSQUERY="" \
+    EXTENSIONS_DOCKER="" \
     APP_TIMEOUT="" \
-    WAZUH_SHARDS="" \
-    WAZUH_REPLICAS="" \
-    WAZUH_VERSION_SHARDS="" \
-    WAZUH_VERSION_REPLICAS="" \
+    API_SELECTOR="" \
     IP_SELECTOR="" \
     IP_IGNORE="" \
-    XPACK_RBAC_ENABLED="" \
     WAZUH_MONITORING_ENABLED="" \
     WAZUH_MONITORING_FREQUENCY="" \
     WAZUH_MONITORING_SHARDS="" \
     WAZUH_MONITORING_REPLICAS="" \
     ADMIN_PRIVILEGES=""
 
-ARG XPACK_CANVAS="true"
-ARG XPACK_LOGS="true"
-ARG XPACK_INFRA="true"
-ARG XPACK_ML="true"
-ARG XPACK_DEVTOOLS="true"
-ARG XPACK_MONITORING="true"
-ARG XPACK_APM="true"
-
-ARG CHANGE_WELCOME="false"
-
-COPY --chown=kibana:kibana ./config/wazuh_app_config.sh ./
-
-RUN chmod +x ./wazuh_app_config.sh
-
-COPY --chown=kibana:kibana ./config/kibana_settings.sh ./
-
-RUN chmod +x ./kibana_settings.sh
-
 USER kibana
 RUN NODE_OPTIONS="--max-old-space-size=2048" /usr/local/bin/kibana-docker --optimize
 
-ENTRYPOINT ./entrypoint.sh
+COPY ./config/custom_welcome /tmp/custom_welcome
+COPY --chown=kibana:kibana ./config/welcome_wazuh.sh ./
+RUN chmod +x ./welcome_wazuh.sh
+ARG CHANGE_WELCOME="true"
+RUN ./welcome_wazuh.sh
+
+COPY --chown=kibana:kibana ./config/wazuh.yml /usr/share/kibana/optimize/wazuh/config/wazuh.yml
+COPY --chown=kibana:kibana ./config/wazuh_app_config.sh ./
+RUN chmod +x ./wazuh_app_config.sh
+
+COPY --chown=kibana:kibana ./config/kibana_settings.sh ./
+RUN chmod +x ./kibana_settings.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

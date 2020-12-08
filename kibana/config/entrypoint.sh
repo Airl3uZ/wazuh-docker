@@ -7,20 +7,26 @@ set -e
 # Waiting for elasticsearch
 ##############################################################################
 
-if [ "x${ELASTICSEARCH_URL}" = "x" ]; then
-  el_url="http://elasticsearch:9200"
+if [ "x${ELASTICSEARCH_URL}" == "x" ]; then
+  if [[ ${ENABLED_SECURITY} == "false" ]]; then
+    export el_url="http://elasticsearch:9200"
+  else
+    export el_url="https://elasticsearch:9200"
+  fi
 else
-  el_url="${ELASTICSEARCH_URL}"
+  export el_url="${ELASTICSEARCH_URL}"
 fi
 
-if [[ ${ENABLED_XPACK} != "true" || "x${ELASTICSEARCH_USERNAME}" = "x" || "x${ELASTICSEARCH_PASSWORD}" = "x" ]]; then
+if [[ ${ENABLED_SECURITY} == "false" || "x${ELASTICSEARCH_USERNAME}" == "x" || "x${ELASTICSEARCH_PASSWORD}" == "x" ]]; then
   auth=""
+  # remove security plugin from kibana if elasticsearch is not using it either
+  /usr/share/kibana/bin/kibana-plugin remove opendistro_security
 else
-  auth="--cacert ${CERTS_DIR}/ca/ca.crt --user ${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD}"
+  export auth="--user ${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD} -k"
 fi
 
 until curl -XGET $el_url ${auth}; do
-  >&2 echo "curl -XGET $el_url ${auth}: Elastic is unavailable - sleeping"
+  >&2 echo "Elastic is unavailable - sleeping"
   sleep 5
 done
 
@@ -53,5 +59,7 @@ sleep 2
 sleep 5
 
 ./kibana_settings.sh &
+
+sleep 2
 
 /usr/local/bin/kibana-docker

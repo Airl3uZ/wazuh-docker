@@ -3,12 +3,10 @@
 
 wazuh_url="${WAZUH_API_URL:-https://wazuh}"
 wazuh_port="${API_PORT:-55000}"
-api_user="${API_USER:-foo}"
-api_password="${API_PASS:-bar}"
+api_username="${API_USERNAME:-wazuh-wui}"
+api_password="${API_PASSWORD:-wazuh-wui}"
 
 kibana_config_file="/usr/share/kibana/optimize/wazuh/config/wazuh.yml"
-mkdir -p /usr/share/kibana/optimize/wazuh/config/
-touch $kibana_config_file
 
 declare -A CONFIG_MAP=(
   [pattern]=$PATTERN
@@ -18,20 +16,21 @@ declare -A CONFIG_MAP=(
   [checks.setup]=$CHECKS_SETUP
   [extensions.pci]=$EXTENSIONS_PCI
   [extensions.gdpr]=$EXTENSIONS_GDPR
+  [extensions.hipaa]=$EXTENSIONS_HIPAA
+  [extensions.nist]=$EXTENSIONS_NIST
+  [extensions.tsc]=$EXTENSIONS_TSC
   [extensions.audit]=$EXTENSIONS_AUDIT
   [extensions.oscap]=$EXTENSIONS_OSCAP
   [extensions.ciscat]=$EXTENSIONS_CISCAT
   [extensions.aws]=$EXTENSIONS_AWS
+  [extensions.gcp]=$EXTENSIONS_GCP
   [extensions.virustotal]=$EXTENSIONS_VIRUSTOTAL
   [extensions.osquery]=$EXTENSIONS_OSQUERY
+  [extensions.docker]=$EXTENSIONS_DOCKER
   [timeout]=$APP_TIMEOUT
-  [wazuh.shards]=$WAZUH_SHARDS
-  [wazuh.replicas]=$WAZUH_REPLICAS
-  [wazuh-version.shards]=$WAZUH_VERSION_SHARDS
-  [wazuh-version.replicas]=$WAZUH_VERSION_REPLICAS
+  [api.selector]=$API_SELECTOR
   [ip.selector]=$IP_SELECTOR
   [ip.ignore]=$IP_IGNORE
-  [xpack.rbac.enabled]=$XPACK_RBAC_ENABLED
   [wazuh.monitoring.enabled]=$WAZUH_MONITORING_ENABLED
   [wazuh.monitoring.frequency]=$WAZUH_MONITORING_FREQUENCY
   [wazuh.monitoring.shards]=$WAZUH_MONITORING_SHARDS
@@ -46,21 +45,18 @@ do
     fi
 done
 
-# remove default API entry (new in 3.11.0_7.5.1)
-sed -ie '/- default:/,+4d' $kibana_config_file
-
-CONFIG_CODE=$(curl -s -o /dev/null -w "%{http_code}" -XGET $el_url/.wazuh/_doc/1513629884013 ${auth})
+CONFIG_CODE=$(curl ${auth} -s -o /dev/null -w "%{http_code}" -XGET $el_url/.wazuh/_doc/1513629884013)
 
 grep -q 1513629884013 $kibana_config_file
 _config_exists=$?
 
 if [[ "x$CONFIG_CODE" != "x200" && $_config_exists -ne 0 ]]; then
-cat << EOF > $kibana_config_file
+cat << EOF >> $kibana_config_file
 hosts:
   - 1513629884013:
       url: $wazuh_url
       port: $wazuh_port
-      user: $api_user
+      username: $api_username
       password: $api_password
 EOF
 else
