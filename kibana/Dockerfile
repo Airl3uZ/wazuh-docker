@@ -21,7 +21,7 @@ RUN mv /usr/share/kibana/plugins/wazuh /tmp/wazuh
 # Copy kibana from stage 0
 # Add entrypoint
 ################################################################################
-FROM docker.elastic.co/kibana/kibana:7.9.3
+FROM docker.elastic.co/kibana/kibana:7.10.0
 LABEL maintainer="siriwat.jiws@gmail.com"
 COPY --from=builder --chown=1000:0 /tmp/wazuh /usr/share/kibana/plugins/wazuh
 USER root
